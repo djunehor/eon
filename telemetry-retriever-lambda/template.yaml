@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Resources:
+  TelemetryRetrieverFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: dist/index.handler
+      Runtime: nodejs18.x
+      CodeUri: ./dist/
+      Policies:
+        - DynamoDBReadPolicy: # Assuming read access to DynamoDB is required
+            TableName: !Ref TelemetryStoreTable
+      Environment:
+        Variables:
+          AWS_REGION: !Ref "AWS::Region"
+          DYNAMODB_TABLE_NAME: !Ref TelemetryStoreTable
+
+  TelemetryStoreTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: TelemetryStore
+      AttributeDefinitions:
+        - AttributeName: siteId
+          AttributeType: S
+        # Add more attribute definitions as needed
+      KeySchema:
+        - AttributeName: siteId
+          KeyType: HASH
+        # Add more key schemas as needed
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+        # Adjust provisioned throughput as needed
+
+  ApiGatewayApi:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: Prod
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title: Telemetry API
+          version: '1.0'
+        paths:
+          /telemetries/siteId/{siteId}:
+            get:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TelemetryRetrieverFunction.Arn}/invocations
+                httpMethod: GET
+                responses: {}
+          /telemetries/deviceId/{deviceId}:
+            get:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TelemetryRetrieverFunction.Arn}/invocations
+                httpMethod: GET
+                responses: {}
+      EndpointConfiguration: REGIONAL

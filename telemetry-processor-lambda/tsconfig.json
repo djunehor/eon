@@ -1,0 +1,20 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "incremental": true,
+    "importHelpers": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitHelpers": false,
+    "noFallthroughCasesInSwitch": true,
+    "preserveConstEnums": true,
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "useUnknownInCatchVariables": false,
+    "experimentalDecorators": true,
+    "outDir": "./dist"
+  },
+  "include": ["src/"],
+  "exclude": ["node_modules/", "**/*.spec.ts"]
+}

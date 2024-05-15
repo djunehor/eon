@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: "AWS SAM template for Telemetry Processor Lambda and API Gateway"
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  TelemetryProcessorFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: dist/index.handler
+      Runtime: nodejs18.x
+      CodeUri: ./dist/
+      Environment:
+        Variables:
+          AWS_REGION: !Ref "AWS::Region"
+          DYNAMO_TABLE: !Ref TelemetryStoreTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /telemetry/{siteId}
+            Method: post
+
+  TelemetryStoreTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: TelemetryStore
+      AttributeDefinitions:
+        - AttributeName: deviceId
+          AttributeType: S
+        - AttributeName: creationTime
+          AttributeType: N
+      KeySchema:
+        - AttributeName: deviceId
+          KeyType: HASH
+        - AttributeName: creationTime
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+Outputs:
+  TelemetryProcessorFunctionArn:
+    Description: "Telemetry Processor Lambda Function ARN"
+    Value: !GetAtt TelemetryProcessorFunction.Arn
+
+  TelemetryStoreTableName:
+    Description: "Telemetry Store DynamoDB Table Name"
+    Value: !Ref TelemetryStoreTable
