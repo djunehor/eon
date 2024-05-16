@@ -1,0 +1,30 @@
+{
+    "name": "telemetry-service",
+    "version": "1.0.0",
+    "description": "Combinination of services for eon-telemetry",
+    "scripts": {
+      "test-authorizer": "cd authorizer && npm run test",
+      "build-authorizer": "cd authorizer && rm -rf dist && rm -f tsconfig.tsbuildinfo && npm run build && cd ..",
+      "test-retriever": "cd retriever && npm run test",
+      "build-retriever": "cd retriever && rm -rf dist && rm -f tsconfig.tsbuildinfo && npm run build && cd ..",
+      "test-processor": "cd processor && npm run test",
+      "build-processor": "cd processor && rm -rf dist && rm -f tsconfig.tsbuildinfo && npm run build && cd ..",
+      "test-only": "npm run test-authorizer && npm run test-retriever && npm run test-processor",
+      "test" : "npm run build && npm run test-only",
+      "build": "npm run build-authorizer && npm run build-processor && npm run build-retriever",
+      "deploy": "npm run build && sam deploy --stack-name TelemetryProcessorStack --s3-bucket <your-s3-bucket>"
+    },
+    "keywords": [],
+    "author": "Zacchaeus Bolaji",
+    "license": "ISC",
+    "jest": {
+      "preset": "ts-jest",
+      "testEnvironment": "node",
+      "collectCoverage": true,
+      "coverageDirectory": "coverage",
+      "collectCoverageFrom": [
+        "src/**/*.ts"
+      ]
+    }
+  }
+  

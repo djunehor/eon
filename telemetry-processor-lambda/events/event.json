@@ -1,6 +1,0 @@
-{
-    "body": "{\"version\":\"1.0\",\"creationTime\":1620845476,\"creationTimeISO\":\"2021-05-12T10:24:36Z\",\"deviceId\":\"exampleDevice\",\"temperature\":{\"celsius\":25,\"fahrenheit\":77}}",
-    "pathParameters": {
-        "siteId" : "eon"
-    }
-}

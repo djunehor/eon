@@ -1,106 +1,58 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 
-Description: "AWS SAM template for Telemetry Lambda and API Gateway"
-
-Globals:
-  Function:
-    Timeout: 30
-
 Resources:
-  TelemetryProcessorFunction:
+  ProcessorFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Handler: telemetry-processor-lambda/dist/index.handler
+      Handler: processor/dist/index.handler
       Runtime: nodejs18.x
-      CodeUri: telemetry-processor-lambda/dist/
       Environment:
         Variables:
-          AWS_REGION: !Ref "AWS::Region"
-          DYNAMO_TABLE: !Ref TelemetryStoreTable
+          AWS_REGION: 'us-east-1'
+          TABLE_NAME: !Ref TelemetryStoreTable
       Events:
-        ApiEvent:
-          Type: Api
+        TelemetryQueueEvent:
+          Type: SQS
           Properties:
-            Path: /telemetries/{siteId}
-            Method: post
+            Queue: !GetAtt TelemetryQueue.Arn
 
-  TelemetryRetrieverFunctionBySiteId:
+  RetrievalFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      Handler: telemetry-retriever-lambda/dist/index.handler
+      Handler: retriever/dist/index.handler
       Runtime: nodejs18.x
-      CodeUri: telemetry-retriever-lambda/dist/
       Environment:
         Variables:
-          AWS_REGION: !Ref "AWS::Region"
-          DYNAMO_TABLE: !Ref TelemetryStoreTable
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            Path: /telemetries/siteId/{siteId}
-            Method: get
+          AWS_REGION: 'us-east-1'
+          TABLE_NAME: !Ref TelemetryStoreTable
 
-  TelemetryRetrieverFunctionByDeviceId:
-      Type: 'AWS::Serverless::Function'
-      Properties:
-        Handler: telemetry-retriever-lambda/dist/index.handler
-        Runtime: nodejs18.x
-        CodeUri: telemetry-retriever-lambda/dist/
-        Environment:
-          Variables:
-            AWS_REGION: !Ref "AWS::Region"
-            DYNAMO_TABLE: !Ref TelemetryStoreTable
-        Events:
-          ApiEvent:
-            Type: Api
-            Properties:
-              Path: /telemetries/deviceId/{deviceId}
-              Method: get
-
-  TelemetryRetrieverFunctionByTimeRange:
-        Type: 'AWS::Serverless::Function'
-        Properties:
-          Handler: telemetry-retriever-lambda/dist/index.handler
-          Runtime: nodejs18.x
-          CodeUri: telemetry-retriever-lambda/dist/
-          Environment:
-            Variables:
-              AWS_REGION: !Ref "AWS::Region"
-              DYNAMO_TABLE: !Ref TelemetryStoreTable
-          Events:
-            ApiEvent:
-              Type: Api
-              Properties:
-                Path: /telemetries/timerange/{timeFrom}/{timeTo}
-                Method: get
+  AuthorizerFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: authorizer/dist/index.handler
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          AWS_REGION: 'us-east-1'
+          # Can be kept safer
+          JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
 
   TelemetryStoreTable:
     Type: 'AWS::DynamoDB::Table'
     Properties:
-      TableName: TelemetryStore
       AttributeDefinitions:
+        - AttributeName: siteId
+          AttributeType: S
         - AttributeName: deviceId
           AttributeType: S
         - AttributeName: creationTime
           AttributeType: N
       KeySchema:
-        - AttributeName: deviceId
+        - AttributeName: siteId
           KeyType: HASH
-        - AttributeName: creationTime
-          KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: CreationTimeIndex
-          KeySchema:
-            - AttributeName: creationTime
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 5
-            WriteCapacityUnits: 5
-        - IndexName: DeviceIdIndex
+        - IndexName: deviceIdIndex
           KeySchema:
             - AttributeName: deviceId
               KeyType: HASH
@@ -109,8 +61,52 @@ Resources:
           ProvisionedThroughput:
             ReadCapacityUnits: 5
             WriteCapacityUnits: 5
+        - IndexName: creationTimeIndex
+          KeySchema:
+            - AttributeName: creationTime
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
 
-Outputs:
-  TelemetryStoreTableName:
-    Description: "Telemetry Store DynamoDB Table Name"
-    Value: !Ref TelemetryStoreTable
+  TelemetryQueue:
+    Type: 'AWS::SQS::Queue'
+
+  TelemetryDLQ:
+    Type: 'AWS::SQS::Queue'
+
+  ApiGateway:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: prod
+      Auth:
+        Authorizers:
+          MyAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            IdentitySource: method.request.header.Authorization
+            Type: REQUEST
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title: 'Telemetry API'
+          version: '2018-07-19'
+        paths:
+          /telemetries/{siteId}:
+            post:
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessorFunction.Arn}/invocations
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - MyAuthorizer: []
+
+          /telemetries:
+            get:
+              x-amazon-apigateway-integration:
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RetrievalFunction.Arn}/invocations
+                httpMethod: POST
+                type: aws_proxy
+              security:
+                - MyAuthorizer: []
