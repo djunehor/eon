@@ -1,7 +1,7 @@
 {
   "name": "telemetry-retriever-lambda",
   "version": "1.0.0",
-  "description": "Lambda function for retrieving telemetry data and rendering it",
+  "description": "Lambda function for retrieving telemetry data and outputting it",
   "main": "dist/index.js",
   "scripts": {
     "test": "jest --coverage",
@@ -14,7 +14,6 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.576.0",
     "@aws-sdk/client-lambda": "^3.577.0",
-    "@aws-sdk/lib-dynamodb": "^3.577.0",
     "aws-lambda": "^1.0.7"
   },
   "devDependencies": {

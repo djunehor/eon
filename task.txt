@@ -58,6 +58,7 @@ Schema for the telemetry data model is as described below:
 
 ______________________
 - `aws configure`
+- `aws cloudformation delete-stack --stack-name <<stack-name>>`
 - `sam package --output-template-file packaged.yaml --s3-bucket eon-telemetry --region us-east-1`
 - `sam deploy --template-file packaged.yaml --stack-name eon-telemetry --capabilities CAPABILITY_IAM`
 - `sam local invoke TelemetryProcessorFunction --event events/event.json`

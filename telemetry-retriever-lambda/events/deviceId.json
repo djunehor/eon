@@ -1,0 +1,6 @@
+{
+    "body" : "{}",
+    "pathParameters": {
+        "deviceId" : "sampleDeviceId"
+    }
+}

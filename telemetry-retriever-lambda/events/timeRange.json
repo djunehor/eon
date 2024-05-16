@@ -1,0 +1,7 @@
+{
+    "body" : "{}",
+    "pathParameters": {
+        "timeFrom" : 1234567890,
+        "timeTo" : 9999999999
+    }
+}

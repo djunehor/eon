@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: "AWS SAM template for Telemetry Lambda and API Gateway"
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  TelemetryProcessorFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: telemetry-processor-lambda/dist/index.handler
+      Runtime: nodejs18.x
+      CodeUri: telemetry-processor-lambda/dist/
+      Environment:
+        Variables:
+          AWS_REGION: !Ref "AWS::Region"
+          DYNAMO_TABLE: !Ref TelemetryStoreTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /telemetries/{siteId}
+            Method: post
+
+  TelemetryRetrieverFunctionBySiteId:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: telemetry-retriever-lambda/dist/index.handler
+      Runtime: nodejs18.x
+      CodeUri: telemetry-retriever-lambda/dist/
+      Environment:
+        Variables:
+          AWS_REGION: !Ref "AWS::Region"
+          DYNAMO_TABLE: !Ref TelemetryStoreTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /telemetries/siteId/{siteId}
+            Method: get
+
+  TelemetryRetrieverFunctionByDeviceId:
+      Type: 'AWS::Serverless::Function'
+      Properties:
+        Handler: telemetry-retriever-lambda/dist/index.handler
+        Runtime: nodejs18.x
+        CodeUri: telemetry-retriever-lambda/dist/
+        Environment:
+          Variables:
+            AWS_REGION: !Ref "AWS::Region"
+            DYNAMO_TABLE: !Ref TelemetryStoreTable
+        Events:
+          ApiEvent:
+            Type: Api
+            Properties:
+              Path: /telemetries/deviceId/{deviceId}
+              Method: get
+
+  TelemetryRetrieverFunctionByTimeRange:
+        Type: 'AWS::Serverless::Function'
+        Properties:
+          Handler: telemetry-retriever-lambda/dist/index.handler
+          Runtime: nodejs18.x
+          CodeUri: telemetry-retriever-lambda/dist/
+          Environment:
+            Variables:
+              AWS_REGION: !Ref "AWS::Region"
+              DYNAMO_TABLE: !Ref TelemetryStoreTable
+          Events:
+            ApiEvent:
+              Type: Api
+              Properties:
+                Path: /telemetries/timerange/{timeFrom}/{timeTo}
+                Method: get
+
+  TelemetryStoreTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: TelemetryStore
+      AttributeDefinitions:
+        - AttributeName: deviceId
+          AttributeType: S
+        - AttributeName: creationTime
+          AttributeType: N
+      KeySchema:
+        - AttributeName: deviceId
+          KeyType: HASH
+        - AttributeName: creationTime
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: CreationTimeIndex
+          KeySchema:
+            - AttributeName: creationTime
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+        - IndexName: DeviceIdIndex
+          KeySchema:
+            - AttributeName: deviceId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+
+Outputs:
+  TelemetryStoreTableName:
+    Description: "Telemetry Store DynamoDB Table Name"
+    Value: !Ref TelemetryStoreTable
