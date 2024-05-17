@@ -44,6 +44,7 @@ on “siteId” or “deviceId”.
  You can implement any kind of authorization mechanism in the Authorizer Lambda to authenticate
 requests coming from 3rd party vendor, however the authorizer lambda code should be functional.
 Schema for the telemetry data model is as described below:
+```
 {
   "version": string,
   "creationTime": number,
@@ -54,11 +55,14 @@ Schema for the telemetry data model is as described below:
       "fahrenheit": number
     }
 }
-
+```
 
 ______________________
-- `aws configure`
-- `aws cloudformation delete-stack --stack-name eon-telemetry`
-- `sam package --output-template-file packaged.yaml --s3-bucket eon-telemetry --region us-east-1`
-- `sam deploy --template-file packaged.yaml --s3-bucket eon-telemetry --stack-name eon-telemetry --capabilities CAPABILITY_IAM --on-failure ROLLBACK --region us-east-1`
-- `sam local invoke AuthorizerFunction --event authorizer/events/valid.json`
+- Configure AWS CLI: `aws configure`
+- Delete cloudformation stack: `aws cloudformation delete-stack --stack-name eon-telemetry`
+- Package: `sam package --output-template-file packaged.yaml --s3-bucket eon-telemetry --region us-east-1`
+- Deploy: `sam deploy --template-file packaged.yaml --s3-bucket eon-telemetry --stack-name eon-telemetry --capabilities CAPABILITY_IAM --on-failure ROLLBACK --region us-east-1`
+- Run locally: `sam local invoke AuthorizerFunction --event authorizer/events/valid.json`
+- Deploy Update: `sam validate --lint && sam package --output-template-file packaged.yaml --s3-bucket eon-telemetry --region us-east-1 && sam deploy --template-file packaged.yaml --s3-bucket eon-telemetry --stack-name eon-telemetry --capabilities CAPABILITY_IAM --on-failure ROLLBACK --region us-east-1`
+- Update deployment: `sam package --output-template-file packaged.yaml --s3-bucket eon-telemetry --region us-east-1 && sam deploy --template-file packaged.yaml --s3-bucket eon-telemetry --stack-name eon-telemetry --capabilities CAPABILITY_IAM --on-failure ROLLBACK --region us-east-1`
+- Generate JWT token: http://jwtbuilder.jamiekurtz.com/

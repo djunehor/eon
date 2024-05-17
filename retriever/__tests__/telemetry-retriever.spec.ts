@@ -56,10 +56,10 @@ describe('Telemetry Retriever Handler', () => {
     const result = await handler(event);
 
     expect(result.statusCode).toBe(400);
-    expect(JSON.parse(result.body).message).toBe('Either siteId or deviceId or time range must be specified');
+    expect(JSON.parse(result.body).message).toBe('siteId must be specified');
   });
 
-  test('should call TelemetryService.getEntriesBySiteId if siteId is specified', async () => {
+  test('should call TelemetryService.getEntriesBySiteId if only siteId is specified', async () => {
     const event: APIGatewayProxyEvent = {
       pathParameters: { siteId: 'testSiteId' },
       body: null,
@@ -115,14 +115,14 @@ describe('Telemetry Retriever Handler', () => {
 
   test('should call TelemetryService.getEntriesByDeviceId if deviceId is specified', async () => {
     const event: APIGatewayProxyEvent = {
-      pathParameters: { deviceId: 'testDeviceId' },
+      pathParameters: { siteId: 'testSiteId' },
       body: null,
       headers: {},
       multiValueHeaders: {},
       httpMethod: '',
       isBase64Encoded: false,
       path: '',
-      queryStringParameters: null,
+      queryStringParameters: { deviceId: 'testDeviceId' },
       multiValueQueryStringParameters: null,
       stageVariables: null,
       requestContext: {
@@ -174,14 +174,14 @@ describe('Telemetry Retriever Handler', () => {
       limit: String(10),
     }
     const event: APIGatewayProxyEvent = {
-      pathParameters: params,
+      pathParameters: { siteId: 'abcd'},
       body: null,
       headers: {},
       multiValueHeaders: {},
       httpMethod: '',
       isBase64Encoded: false,
       path: '',
-      queryStringParameters: null,
+      queryStringParameters: params,
       multiValueQueryStringParameters: null,
       stageVariables: null,
       requestContext: {
@@ -222,11 +222,11 @@ describe('Telemetry Retriever Handler', () => {
     const result = await handler(event);
 
     expect(result.statusCode).toBe(200);
-    expect(getEntriesByTimeRange).toHaveBeenCalledWith(Number(params.timeFrom), Number(params.timeTo), Number(params.limit));
+    expect(getEntriesByTimeRange).toHaveBeenCalledWith('abcd', Number(params.timeFrom), Number(params.timeTo), Number(params.limit));
     expect(getEntriesByTimeRange).toHaveBeenCalledTimes(1);
   });
 
-  test('should return 500 if an error occurs', async () => {
+  test('Failed to retrieve entries', async () => {
     const event: APIGatewayProxyEvent = { pathParameters: { siteId: 'testSiteId' }, body: null,
     headers: {},
     multiValueHeaders: {},
@@ -272,6 +272,6 @@ describe('Telemetry Retriever Handler', () => {
     const result = await handler(event);
 
     expect(result.statusCode).toBe(500);
-    expect(JSON.parse(result.body).message).toBe('Internal Server Error');
+    expect(JSON.parse(result.body).message).toBe('Failed to retrieve entries');
   });
 });

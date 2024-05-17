@@ -37,7 +37,7 @@ Resources:
       CodeUri: authorizer/dist/
       Environment:
         Variables:
-          ## Can be kept safer
+          # can be kept safer with AWS Secrets Manager
           JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
 
   TelemetryStoreTable:
@@ -79,9 +79,16 @@ Resources:
 
   TelemetryQueue:
     Type: 'AWS::SQS::Queue'
+    Properties:
+      QueueName: TelemetryQueue
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt TelemetryDLQ.Arn
+        maxReceiveCount: 5
 
   TelemetryDLQ:
     Type: 'AWS::SQS::Queue'
+    Properties:
+      QueueName: TelemetryDLQ
 
   ApiGateway:
     Type: 'AWS::Serverless::Api'
@@ -99,40 +106,21 @@ Resources:
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessorFunction.Arn}/invocations
                 httpMethod: POST
                 type: aws_proxy
-              security:
-                - MyAuthorizer: []
 
             get:
               x-amazon-apigateway-integration:
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RetrieverFunction.Arn}/invocations
                 httpMethod: POST
                 type: aws_proxy
-              security:
-                - MyAuthorizer: []
 
-  ApiGatewayInvokeProcessor:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: "lambda:InvokeFunction"
-      FunctionName: !GetAtt ProcessorFunction.Arn
-      Principal: "apigateway.amazonaws.com"
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
-
-  ApiGatewayInvokeRetriever:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: "lambda:InvokeFunction"
-      FunctionName: !GetAtt RetrieverFunction.Arn
-      Principal: "apigateway.amazonaws.com"
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
-
-  ApiGatewayInvokeAuthorizer:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: "lambda:InvokeFunction"
-      FunctionName: !GetAtt AuthorizerFunction.Arn
-      Principal: "apigateway.amazonaws.com"
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+      Auth:
+        DefaultAuthorizer: MyAuthorizer
+        Authorizers:
+          MyAuthorizer:
+            FunctionArn:
+              Fn::GetAtt:
+                - AuthorizerFunction
+                - Arn
 
   ProcessorFunctionRole:
     Type: 'AWS::IAM::Role'
@@ -161,3 +149,27 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSQSFullAccess
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+
+  ApiGatewayInvokeProcessor:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ProcessorFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+
+  ApiGatewayInvokeRetriever:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt RetrieverFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+
+  ApiGatewayInvokeAuthorizer:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"

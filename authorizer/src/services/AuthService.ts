@@ -25,6 +25,7 @@ export const generatePolicy = (principalId: string, effect: string, resource: st
         secret = String(process.env.JWT_SECRET)
         const decoded = jwt.verify(token, secret);
         const expiresAt: number = typeof decoded === 'object' && decoded['exp'] ? decoded['exp'] : 0
+        // for test purpose, we simply check if token is valid and not expired
         return expiresAt > Date.now()
       } catch(err) {
         console.error('validateToken:Error', err)

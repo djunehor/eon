@@ -3,8 +3,8 @@ import { generatePolicy, validateToken } from './services/AuthService';
 
 export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult> => {
   try {
-    // Check if the Authorization header is present
-    const token = event.authorizationToken;
+    // Check if the Authorization header is present and remove the "bearer" part if any
+    const token = event.authorizationToken.split(' ').pop();
     if (!token) {
       return generatePolicy('user', 'Deny', event.methodArn);
     }
@@ -13,6 +13,7 @@ export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<AP
     const isValid = await validateToken(token);
 
     if (!isValid) {
+      console.error('Token validation failed', event)
       return generatePolicy('user', 'Deny', event.methodArn);
     }
 

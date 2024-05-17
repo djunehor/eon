@@ -6,7 +6,7 @@ Resources:
     Properties:
       Handler: processor/dist/index.handler
       Runtime: nodejs20.x
-      CodeUri: s3://eon-telemetry/d6319866d57b3849ed04cb6abc6c782a
+      CodeUri: s3://eon-telemetry/0a37f75ab33d532b0166b1846ee47d1b
       Environment:
         Variables:
           TABLE_NAME:
@@ -30,7 +30,7 @@ Resources:
     Properties:
       Handler: retriever/dist/index.handler
       Runtime: nodejs20.x
-      CodeUri: s3://eon-telemetry/6ba6ab5181247d35eb2e0b6c45bc4005
+      CodeUri: s3://eon-telemetry/4c712c7cc3447937b8d0a3c6d8bf3f91
       Environment:
         Variables:
           TABLE_NAME:
@@ -46,7 +46,7 @@ Resources:
     Properties:
       Handler: authorizer/dist/index.handler
       Runtime: nodejs20.x
-      CodeUri: s3://eon-telemetry/10bd275ed9e38feff417b492f9fd3e6f
+      CodeUri: s3://eon-telemetry/05c88d3be5553f479e6654399e13023a
       Environment:
         Variables:
           JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
@@ -92,10 +92,20 @@ Resources:
       SamResourceId: TelemetryStoreTable
   TelemetryQueue:
     Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TelemetryQueue
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+          - TelemetryDLQ
+          - Arn
+        maxReceiveCount: 5
     Metadata:
       SamResourceId: TelemetryQueue
   TelemetryDLQ:
     Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TelemetryDLQ
     Metadata:
       SamResourceId: TelemetryDLQ
   ApiGateway:
@@ -115,18 +125,52 @@ Resources:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessorFunction.Arn}/invocations
                 httpMethod: POST
                 type: aws_proxy
-              security:
-              - MyAuthorizer: []
             get:
               x-amazon-apigateway-integration:
                 uri:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RetrieverFunction.Arn}/invocations
                 httpMethod: POST
                 type: aws_proxy
-              security:
-              - MyAuthorizer: []
+      Auth:
+        DefaultAuthorizer: MyAuthorizer
+        Authorizers:
+          MyAuthorizer:
+            FunctionArn:
+              Fn::GetAtt:
+              - AuthorizerFunction
+              - Arn
     Metadata:
       SamResourceId: ApiGateway
+  ProcessorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    Metadata:
+      SamResourceId: ProcessorFunctionRole
+  RetrieverFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    Metadata:
+      SamResourceId: RetrieverFunctionRole
   ApiGatewayInvokeProcessor:
     Type: AWS::Lambda::Permission
     Properties:
@@ -166,33 +210,3 @@ Resources:
         Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*
     Metadata:
       SamResourceId: ApiGatewayInvokeAuthorizer
-  ProcessorFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action: sts:AssumeRole
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/AmazonSQSFullAccess
-      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-    Metadata:
-      SamResourceId: ProcessorFunctionRole
-  RetrieverFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action: sts:AssumeRole
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/AmazonSQSFullAccess
-      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-    Metadata:
-      SamResourceId: RetrieverFunctionRole
