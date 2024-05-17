@@ -55,7 +55,7 @@ describe('validateToken', () => {
   });
 
   test('should return false for an invalid token', async () => {
-    const token = 'invalid_token'; // replace with an invalid token
+    const token = 'invalid_token';
     const isValid = await validateToken(token);
     expect(isValid).toBeFalsy();
   });

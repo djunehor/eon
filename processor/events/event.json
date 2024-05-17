@@ -1,5 +1,5 @@
 {
-    "body": "{\\"version\\":\\"1.0\\",\\"creationTime\\":1715882420695,\\"creationTimeISO\\":\\"2024-05-16T18: 00: 20.695Z\\",\\"deviceId\\":\\"ufmqtdp\\",\\"temperature\\":{\\"celsius\\":25,\\"fahrenheit\\":77}}",
+    "body": "{\"version\":\"1.0\",\"creationTime\":1715882420695,\"creationTimeISO\":\"2024-05-16T18: 00: 20.695Z\",\"deviceId\":\"ufmqtdp\",\"temperature\":{\"celsius\":25,\"fahrenheit\":77}}",
     "pathParameters": {
         "siteId": "abcdeg"
     },

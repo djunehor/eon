@@ -60,5 +60,5 @@ ______________________
 - `aws configure`
 - `aws cloudformation delete-stack --stack-name eon-telemetry`
 - `sam package --output-template-file packaged.yaml --s3-bucket eon-telemetry --region us-east-1`
-- `sam deploy --template-file packaged.yaml --stack-name eon-telemetry --capabilities CAPABILITY_IAM`
+- `sam deploy --template-file packaged.yaml --s3-bucket eon-telemetry --stack-name eon-telemetry --capabilities CAPABILITY_IAM --on-failure ROLLBACK --region us-east-1`
 - `sam local invoke AuthorizerFunction --event authorizer/events/valid.json`

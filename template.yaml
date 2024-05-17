@@ -6,41 +6,44 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: processor/dist/index.handler
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
+      CodeUri: processor/dist/
       Environment:
         Variables:
-          AWS_REGION: 'us-east-1'
           TABLE_NAME: !Ref TelemetryStoreTable
       Events:
         TelemetryQueueEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt TelemetryQueue.Arn
+      Role: !GetAtt ProcessorFunctionRole.Arn
 
-  RetrievalFunction:
+  RetrieverFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: retriever/dist/index.handler
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
+      CodeUri: retriever/dist/
       Environment:
         Variables:
-          AWS_REGION: 'us-east-1'
           TABLE_NAME: !Ref TelemetryStoreTable
+      Role: !GetAtt RetrieverFunctionRole.Arn
 
   AuthorizerFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: authorizer/dist/index.handler
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
+      CodeUri: authorizer/dist/
       Environment:
         Variables:
-          AWS_REGION: 'us-east-1'
-          # Can be kept safer
+          ## Can be kept safer
           JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
 
   TelemetryStoreTable:
     Type: 'AWS::DynamoDB::Table'
     Properties:
+      TableName: TelemetryStoreTable
       AttributeDefinitions:
         - AttributeName: siteId
           AttributeType: S
@@ -51,6 +54,9 @@ Resources:
       KeySchema:
         - AttributeName: siteId
           KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
       GlobalSecondaryIndexes:
         - IndexName: deviceIdIndex
           KeySchema:
@@ -80,13 +86,7 @@ Resources:
   ApiGateway:
     Type: 'AWS::Serverless::Api'
     Properties:
-      StageName: prod
-      Auth:
-        Authorizers:
-          MyAuthorizer:
-            FunctionArn: !GetAtt AuthorizerFunction.Arn
-            IdentitySource: method.request.header.Authorization
-            Type: REQUEST
+      StageName: v1
       DefinitionBody:
         swagger: '2.0'
         info:
@@ -102,11 +102,62 @@ Resources:
               security:
                 - MyAuthorizer: []
 
-          /telemetries:
             get:
               x-amazon-apigateway-integration:
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RetrievalFunction.Arn}/invocations
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RetrieverFunction.Arn}/invocations
                 httpMethod: POST
                 type: aws_proxy
               security:
                 - MyAuthorizer: []
+
+  ApiGatewayInvokeProcessor:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt ProcessorFunction.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+
+  ApiGatewayInvokeRetriever:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt RetrieverFunction.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+
+  ApiGatewayInvokeAuthorizer:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+
+  ProcessorFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+
+  RetrieverFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess

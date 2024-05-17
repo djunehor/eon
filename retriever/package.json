@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "jest --coverage",
-    "build": "tsc"
+    "build": "rm -f tsconfig.tsbuildinfo && tsc && cp package.json package-lock.json dist/",
+    "prod": "npm run build && cp -rf node_modules dist/node_modules && cd dist && npm ci --omit=dev"
   },
   "keywords": [],
   "author": "Zacchaeus Bolaji",

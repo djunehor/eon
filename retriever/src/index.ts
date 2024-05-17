@@ -4,26 +4,29 @@ import { AttributeValue } from '@aws-sdk/client-dynamodb';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const { siteId, deviceId, timeFrom, timeTo, limit } = event.pathParameters || {}
+        const { siteId } = event.pathParameters || {}
+        const { deviceId, timeFrom, timeTo, limit } = event.queryStringParameters || {}
 
-        if (!siteId && !deviceId && !(timeFrom && timeTo)) {
+        if (!siteId) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ message: "Either siteId or deviceId or time range must be specified" })
+                body: JSON.stringify({ message: "siteId must be specified" })
             };
         }
+
         const telemetryService: TelemetryService = new TelemetryService();
         let telemetries: Record<string, AttributeValue>[]
-        if (siteId) {
-            telemetries = await telemetryService.getEntriesBySiteId(siteId)
-        } else if (deviceId) {
+        if (deviceId) {
             telemetries = await telemetryService.getEntriesByDeviceId(deviceId);
         } else if(timeFrom) {
             telemetries = await telemetryService.getEntriesByTimeRange(
-                Number(timeFrom), Number(timeTo), isNaN(Number(limit)) ? 10 : Number(limit)
+                siteId,
+                Number(timeFrom),
+                Number(timeTo),
+                isNaN(Number(limit)) ? 10 : Number(limit)
             );
         } else {
-            throw Error('One or more required parameters is missing')
+            telemetries = await telemetryService.getEntriesBySiteId(siteId)
         }
 
         return {
@@ -34,7 +37,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         console.error('Error retrieving telemetries:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ message: 'Internal Server Error' })
+            body: JSON.stringify({ message: 'Failed to retrieve entries' })
         };
     }
 };

@@ -1,10 +1,10 @@
 import { PutItemCommand, DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {  APIGatewayProxyResult, APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyResult, APIGatewayProxyEvent } from 'aws-lambda';
 import { Telemetry } from "./models/Telemetry";
 import { isValidTelemetryData } from "./utils";
 
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
-const DYNAMO_TABLE = process.env.DYNAMO_TABLE || 'default-table-name';
+const AWS_REGION = process.env.AWS_REGION;
+const DYNAMO_TABLE = process.env.TABLE_NAME;
 
 // Initialize DynamoDB Document Client
 const docClient = new DynamoDBClient({ region: AWS_REGION });
@@ -14,20 +14,18 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     try {
         const telemetryData: Telemetry = JSON.parse(event.body || '');
 
-        // what do we use siteId for?
         const siteId = event.pathParameters?.siteId;
-
 
         // Validate telemetryData structure before sending to DynamoDB
         if (typeof siteId !== 'string' || !isValidTelemetryData(telemetryData)) {
             return {
                 statusCode: 400,
                 body: JSON.stringify({ message: 'Incomplete telemetry data' })
-              };
+            };
         }
 
-         // Prepare the parameters to put item in DynamoDB
-         const params = {
+        // Prepare the parameters to put item in DynamoDB
+        const params = {
             TableName: DYNAMO_TABLE,
             Item: {
                 'siteId': { S: siteId },
@@ -43,6 +41,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 },
             },
         };
+
         // Put the telemetry data into DynamoDB
         await docClient.send(new PutItemCommand(params));
 

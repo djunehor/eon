@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: processor/dist/index.handler
+      Runtime: nodejs20.x
+      CodeUri: s3://eon-telemetry/d6319866d57b3849ed04cb6abc6c782a
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: TelemetryStoreTable
+      Events:
+        TelemetryQueueEvent:
+          Type: SQS
+          Properties:
+            Queue:
+              Fn::GetAtt:
+              - TelemetryQueue
+              - Arn
+      Role:
+        Fn::GetAtt:
+        - ProcessorFunctionRole
+        - Arn
+    Metadata:
+      SamResourceId: ProcessorFunction
+  RetrieverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: retriever/dist/index.handler
+      Runtime: nodejs20.x
+      CodeUri: s3://eon-telemetry/6ba6ab5181247d35eb2e0b6c45bc4005
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: TelemetryStoreTable
+      Role:
+        Fn::GetAtt:
+        - RetrieverFunctionRole
+        - Arn
+    Metadata:
+      SamResourceId: RetrieverFunction
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: authorizer/dist/index.handler
+      Runtime: nodejs20.x
+      CodeUri: s3://eon-telemetry/10bd275ed9e38feff417b492f9fd3e6f
+      Environment:
+        Variables:
+          JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
+    Metadata:
+      SamResourceId: AuthorizerFunction
+  TelemetryStoreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TelemetryStoreTable
+      AttributeDefinitions:
+      - AttributeName: siteId
+        AttributeType: S
+      - AttributeName: deviceId
+        AttributeType: S
+      - AttributeName: creationTime
+        AttributeType: N
+      KeySchema:
+      - AttributeName: siteId
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+      - IndexName: deviceIdIndex
+        KeySchema:
+        - AttributeName: deviceId
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+      - IndexName: creationTimeIndex
+        KeySchema:
+        - AttributeName: creationTime
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    Metadata:
+      SamResourceId: TelemetryStoreTable
+  TelemetryQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      SamResourceId: TelemetryQueue
+  TelemetryDLQ:
+    Type: AWS::SQS::Queue
+    Metadata:
+      SamResourceId: TelemetryDLQ
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: v1
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title: Telemetry API
+          version: '2018-07-19'
+        paths:
+          /telemetries/{siteId}:
+            post:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessorFunction.Arn}/invocations
+                httpMethod: POST
+                type: aws_proxy
+              security:
+              - MyAuthorizer: []
+            get:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RetrieverFunction.Arn}/invocations
+                httpMethod: POST
+                type: aws_proxy
+              security:
+              - MyAuthorizer: []
+    Metadata:
+      SamResourceId: ApiGateway
+  ApiGatewayInvokeProcessor:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - ProcessorFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*
+    Metadata:
+      SamResourceId: ApiGatewayInvokeProcessor
+  ApiGatewayInvokeRetriever:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - RetrieverFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*
+    Metadata:
+      SamResourceId: ApiGatewayInvokeRetriever
+  ApiGatewayInvokeAuthorizer:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - AuthorizerFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*
+    Metadata:
+      SamResourceId: ApiGatewayInvokeAuthorizer
+  ProcessorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    Metadata:
+      SamResourceId: ProcessorFunctionRole
+  RetrieverFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+      - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+    Metadata:
+      SamResourceId: RetrieverFunctionRole

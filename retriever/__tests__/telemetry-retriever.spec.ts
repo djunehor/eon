@@ -57,7 +57,6 @@ describe('Telemetry Retriever Handler', () => {
 
     expect(result.statusCode).toBe(400);
     expect(JSON.parse(result.body).message).toBe('Either siteId or deviceId or time range must be specified');
-    //expect(TelemetryService).not.toHaveBeenCalled(); // Ensure TelemetryService is not called
   });
 
   test('should call TelemetryService.getEntriesBySiteId if siteId is specified', async () => {

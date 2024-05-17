@@ -1,14 +1,16 @@
 {
     "pathParameters": {
-        "timeFrom": "1234567890",
-        "timeTo": "9999999999"
+        "siteId" : "abcdeg"
     },
     "headers": {},
     "multiValueHeaders": {},
     "httpMethod": "",
     "isBase64Encoded": false,
     "path": "",
-    "queryStringParameters": null,
+    "queryStringParameters": {
+        "timeFrom": "1234567890",
+        "timeTo": "1715882420695"
+    },
     "multiValueQueryStringParameters": null,
     "stageVariables": null,
     "requestContext": {

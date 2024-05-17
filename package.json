@@ -4,15 +4,18 @@
     "description": "Combinination of services for eon-telemetry",
     "scripts": {
       "test-authorizer": "cd authorizer && npm run test",
-      "build-authorizer": "cd authorizer && rm -rf dist && rm -f tsconfig.tsbuildinfo && npm run build && cd ..",
+      "build-authorizer": "cd authorizer && npm run build && cd ..",
+      "prod-authorizer": "cd authorizer && npm run prod && cd ..",
       "test-retriever": "cd retriever && npm run test",
-      "build-retriever": "cd retriever && rm -rf dist && rm -f tsconfig.tsbuildinfo && npm run build && cd ..",
+      "build-retriever": "cd retriever && npm run build && cd ..",
+      "prod-retriever": "cd retriever&& npm run prod && cd ..",
       "test-processor": "cd processor && npm run test",
-      "build-processor": "cd processor && rm -rf dist && rm -f tsconfig.tsbuildinfo && npm run build && cd ..",
+      "build-processor": "cd processor && npm run build && cd ..",
+      "prod-processor": "cd processor&& npm run prod && cd ..",
       "test-only": "npm run test-authorizer && npm run test-retriever && npm run test-processor",
       "test" : "npm run build && npm run test-only",
       "build": "npm run build-authorizer && npm run build-processor && npm run build-retriever",
-      "deploy": "npm run build && sam deploy --stack-name TelemetryProcessorStack --s3-bucket <your-s3-bucket>"
+      "prod": "npm run prod-authorizer && npm run prod-processor && npm run prod-retriever"
     },
     "keywords": [],
     "author": "Zacchaeus Bolaji",

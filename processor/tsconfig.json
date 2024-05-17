@@ -3,7 +3,7 @@
   "compilerOptions": {
     "downlevelIteration": true,
     "incremental": true,
-    "importHelpers": true,
+    "importHelpers": false,
     "module": "commonjs",
     "moduleResolution": "node",
     "noEmitHelpers": false,

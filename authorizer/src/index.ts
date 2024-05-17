@@ -1,10 +1,10 @@
-import { APIGatewayAuthorizerResult, APIGatewayRequestAuthorizerEvent } from 'aws-lambda';
+import { APIGatewayAuthorizerResult, APIGatewayTokenAuthorizerEvent } from 'aws-lambda';
 import { generatePolicy, validateToken } from './services/AuthService';
 
-export const handler = async (event: APIGatewayRequestAuthorizerEvent): Promise<APIGatewayAuthorizerResult> => {
+export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult> => {
   try {
     // Check if the Authorization header is present
-    const token = event.headers?.['Authorization']?.replace('Bearer ', '');
+    const token = event.authorizationToken;
     if (!token) {
       return generatePolicy('user', 'Deny', event.methodArn);
     }

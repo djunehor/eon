@@ -1,13 +1,15 @@
 {
     "pathParameters": {
-        "deviceId": "sampleDeviceId"
+        "siteId" : "abcdeg"
     },
     "headers": {},
     "multiValueHeaders": {},
     "httpMethod": "",
     "isBase64Encoded": false,
     "path": "",
-    "queryStringParameters": null,
+    "queryStringParameters": {
+        "deviceId": "ufmqtdp"
+    },
     "multiValueQueryStringParameters": null,
     "stageVariables": null,
     "requestContext": {
