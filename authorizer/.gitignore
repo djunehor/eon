@@ -2,3 +2,4 @@ coverage
 node_modules
 dist
 .aws-sam
+tsconfig.tsbuildinfo

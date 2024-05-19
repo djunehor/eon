@@ -37,8 +37,9 @@ Resources:
       CodeUri: authorizer/dist/
       Environment:
         Variables:
-          # can be kept safer with AWS Secrets Manager
-          JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
+          # AWS Secrets Manager
+          JWT_SECRET_NAME: "eon/jwt"
+      Role: !GetAtt AuthorizerFunctionRole.Arn
 
   TelemetryStoreTable:
     Type: 'AWS::DynamoDB::Table'
@@ -133,6 +134,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
+      # More granular permission can be granted
         - arn:aws:iam::aws:policy/AmazonSQSFullAccess
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
 
@@ -149,6 +151,26 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSQSFullAccess
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+
+  AuthorizerFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: SecretsManagerReadOnlyPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                - 'secretsmanager:GetSecretValue'
+                Resource: '*'
 
   ApiGatewayInvokeProcessor:
     Type: AWS::Lambda::Permission
@@ -173,3 +195,8 @@ Resources:
       FunctionName: !GetAtt AuthorizerFunction.Arn
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*"
+
+Outputs:
+  ApiGatewayId:
+    Value: !Ref ApiGateway
+    Description: ID of the API Gateway created

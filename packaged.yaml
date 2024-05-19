@@ -46,10 +46,14 @@ Resources:
     Properties:
       Handler: authorizer/dist/index.handler
       Runtime: nodejs20.x
-      CodeUri: s3://eon-telemetry/05c88d3be5553f479e6654399e13023a
+      CodeUri: s3://eon-telemetry/bd2d86fba79a41eb64a9faeb413ef1b5
       Environment:
         Variables:
-          JWT_SECRET: 100189e85bd88238dd6b8fa6444c0100f778c2b1047f32ad47443d9de17fc939
+          JWT_SECRET_NAME: eon/jwt
+      Role:
+        Fn::GetAtt:
+        - AuthorizerFunctionRole
+        - Arn
     Metadata:
       SamResourceId: AuthorizerFunction
   TelemetryStoreTable:
@@ -171,6 +175,27 @@ Resources:
       - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
     Metadata:
       SamResourceId: RetrieverFunctionRole
+  AuthorizerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: SecretsManagerReadOnlyPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - secretsmanager:GetSecretValue
+            Resource: '*'
+    Metadata:
+      SamResourceId: AuthorizerFunctionRole
   ApiGatewayInvokeProcessor:
     Type: AWS::Lambda::Permission
     Properties:
@@ -210,3 +235,8 @@ Resources:
         Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*
     Metadata:
       SamResourceId: ApiGatewayInvokeAuthorizer
+Outputs:
+  ApiGatewayId:
+    Value:
+      Ref: ApiGateway
+    Description: ID of the API Gateway created

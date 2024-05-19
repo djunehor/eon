@@ -35,7 +35,7 @@ export class TelemetryService {
         return response.Items || []
     }
 
-    async getEntriesByTimeRange(siteId: string, timeFrom: number, timeTo: number, limit?: number): Promise<Record<string, AttributeValue>[]> {
+    async getEntriesByTimeRange(siteId: string, timeFrom: number, timeTo: number): Promise<Record<string, AttributeValue>[]> {
         const command = new QueryCommand({
             TableName: DYNAMO_TABLE,
             KeyConditionExpression: 'siteId = :siteId', 
@@ -45,7 +45,7 @@ export class TelemetryService {
                 ":min": { N: String(timeFrom) },
                 ":max": { N: String(timeTo) }
             },
-            Limit: limit || 10,
+            Limit: 100, // we can create this as a parameter
         });
         
         const response = await client.send(command);

@@ -1,6 +1,6 @@
 import { APIGatewayAuthorizerResult } from 'aws-lambda';
 import { generatePolicy, validateToken } from '../../src/services/AuthService';
-import jwt from 'jsonwebtoken'
+const jwt = require('jsonwebtoken')
 
 process.env.JWT_SECRET = 'test_secret1'
 describe('generatePolicy', () => {
@@ -50,13 +50,13 @@ describe('generatePolicy', () => {
 describe('validateToken', () => {
   test('should return true for a valid token', async () => {
     const token = jwt.sign({ exp: Date.now() + (60 * 60) }, String(process.env.JWT_SECRET));
-    const isValid = await validateToken(token);
+    const isValid = await validateToken(token, process.env.JWT_SECRET!);
     expect(isValid).toBeTruthy();
   });
 
   test('should return false for an invalid token', async () => {
     const token = 'invalid_token';
-    const isValid = await validateToken(token);
+    const isValid = await validateToken(token, process.env.JWT_SECRET!);
     expect(isValid).toBeFalsy();
   });
 });

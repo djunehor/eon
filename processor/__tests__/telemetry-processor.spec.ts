@@ -76,7 +76,7 @@ describe('Telemetry Processor', () => {
         expect(JSON.parse(result.body).message).toBe('Telemetry data stored successfully'); // Verify the response message
     });
 
-    test('should handle error when processing telemetry data', async () => {
+    test('should error when exception in telemetry data', async () => {
         // Mock event object with telemetry data
         const event: APIGatewayProxyEvent = {
             body: JSON.stringify({
@@ -142,10 +142,10 @@ describe('Telemetry Processor', () => {
         // Assertions
         expect(mockSend).toHaveBeenCalled(); // Verify that DynamoDBClient's send method was called
         expect(result.statusCode).toBe(500); // Verify the status code
-        expect(JSON.parse(result.body).message).toBe('Error processing telemetry'); // Verify the response message
+        expect(JSON.parse(result.body).message).toBe('Failed to store telemetry data'); // Verify the response message
     });
 
-    test('should handle incorrect/invalid telemetry data', async () => {
+    test('should error when siteId not provided', async () => {
         // Mock event object with invalid telemetry data
         const event: APIGatewayProxyEvent = {
             body: JSON.stringify({
@@ -208,8 +208,152 @@ describe('Telemetry Processor', () => {
 
     
         // Assertions
-        expect(result.statusCode).toBe(400); // Verify the status code
+        expect(result.statusCode).toBe(422); // Verify the status code
+        expect(JSON.parse(result.body).message).toBe('siteId is required'); // Verify the response message
+    });
+
+    test('should error when invalid/incorrect telemetry data', async () => {
+        // Mock event object with invalid telemetry data
+        const event: APIGatewayProxyEvent = {
+            body: JSON.stringify({
+                version: 232,
+                temperature: {
+                    celsius: '25',
+                    fahrenheit: '77',
+                },
+            }),
+            pathParameters: { siteId: 'siteIdVal'},
+            headers: {},
+            multiValueHeaders: {},
+            httpMethod: '',
+            isBase64Encoded: false,
+            path: '',
+            queryStringParameters: null,
+            multiValueQueryStringParameters: null,
+            stageVariables: null,
+            requestContext: {
+                accountId: '',
+                apiId: '',
+                authorizer: undefined,
+                protocol: '',
+                httpMethod: '',
+                identity: {
+                    accessKey: null,
+                    accountId: null,
+                    apiKey: null,
+                    apiKeyId: null,
+                    caller: null,
+                    clientCert: null,
+                    cognitoAuthenticationProvider: null,
+                    cognitoAuthenticationType: null,
+                    cognitoIdentityId: null,
+                    cognitoIdentityPoolId: null,
+                    principalOrgId: null,
+                    sourceIp: '',
+                    user: null,
+                    userAgent: null,
+                    userArn: null
+                },
+                path: '',
+                stage: '',
+                requestId: '',
+                requestTimeEpoch: 0,
+                resourceId: '',
+                resourcePath: ''
+            },
+            resource: ''
+        };
+
+         // Mock the implementation of DynamoDBClient's send method
+         const mockSend = jest.fn().mockRejectedValue({}); // Mock resolve value
+
+         // Assign the mock implementation to the docClient.send property
+         DynamoDBClient.prototype.send = mockSend;
+    
+        // Call the processTelemetry function
+        const result = await handler(event);
+
+    
+        // Assertions
+        expect(result.statusCode).toBe(422); // Verify the status code
         expect(JSON.parse(result.body).message).toBe('Incomplete telemetry data'); // Verify the response message
+    });
+    
+    test('should error when no body', async () => {
+        // Mock event object with invalid telemetry data
+        const event: APIGatewayProxyEvent = {
+            body: null,
+            pathParameters: { siteId: 'siteIdVal'},
+            headers: {},
+            multiValueHeaders: {},
+            httpMethod: '',
+            isBase64Encoded: false,
+            path: '',
+            queryStringParameters: null,
+            multiValueQueryStringParameters: null,
+            stageVariables: null,
+            requestContext: {
+                accountId: '',
+                apiId: '',
+                authorizer: undefined,
+                protocol: '',
+                httpMethod: '',
+                identity: {
+                    accessKey: null,
+                    accountId: null,
+                    apiKey: null,
+                    apiKeyId: null,
+                    caller: null,
+                    clientCert: null,
+                    cognitoAuthenticationProvider: null,
+                    cognitoAuthenticationType: null,
+                    cognitoIdentityId: null,
+                    cognitoIdentityPoolId: null,
+                    principalOrgId: null,
+                    sourceIp: '',
+                    user: null,
+                    userAgent: null,
+                    userArn: null
+                },
+                path: '',
+                stage: '',
+                requestId: '',
+                requestTimeEpoch: 0,
+                resourceId: '',
+                resourcePath: ''
+            },
+            resource: ''
+        };
+
+         // Mock the implementation of DynamoDBClient's send method
+         const mockSend = jest.fn().mockRejectedValue({}); // Mock resolve value
+
+         // Assign the mock implementation to the docClient.send property
+         DynamoDBClient.prototype.send = mockSend;
+    
+        // Call the processTelemetry function
+        const result = await handler(event);
+
+    
+        // Assertions
+        expect(result.statusCode).toBe(422); // Verify the status code
+        expect(JSON.parse(result.body).message).toBe('Invalid payload sent'); // Verify the response message
+    });
+
+    test('should error when invalid request', async () => {
+         // Mock the implementation of DynamoDBClient's send method
+         const mockSend = jest.fn().mockRejectedValue({}); // Mock resolve value
+
+         // Assign the mock implementation to the docClient.send property
+         DynamoDBClient.prototype.send = mockSend;
+    
+        //@ts-ignore: Call the processTelemetry function
+        const result = await handler();
+
+    
+        // Assertions
+        expect(result.statusCode).toBe(500); // Verify the status code
+        expect(JSON.parse(result.body).message).toBe('Error processing telemetry'); // Verify the response message
     });
     
 });

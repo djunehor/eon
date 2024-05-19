@@ -12,6 +12,7 @@
   "author": "Zacchaeus Bolaji",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.578.0",
     "aws-lambda": "^1.0.7",
     "jsonwebtoken": "^9.0.2"
   },

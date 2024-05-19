@@ -1,5 +1,10 @@
 import { Telemetry } from "../models/Telemetry";
 
+interface IResponse {
+    statusCode: number;
+    body: string;
+}
+
 // Function to validate telemetryData structure
 export const isValidTelemetryData = (data: any): data is Telemetry => {
     return (
@@ -12,3 +17,10 @@ export const isValidTelemetryData = (data: any): data is Telemetry => {
         typeof data.temperature.fahrenheit === 'number'
     );
 };
+
+export const responseFormat = (message: string, statusCode: number = 200): IResponse => {
+    return {
+        statusCode,
+        body: JSON.stringify({ message })
+    }
+}
